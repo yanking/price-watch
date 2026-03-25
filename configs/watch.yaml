@@ -1,0 +1,16 @@
+# 日志配置
+log:
+  level: 'info'
+  format: 'json'
+  output: 'stdout'
+  enableTrace: true
+  addSource: false
+  timeFormat: '2006-01-02 15:04:05'
+
+# MySQL 配置
+mysql:
+  # 注意：这是开发环境示例配置，生产环境请使用环境变量管理密码
+  dsn: "root:root@tcp(127.0.0.1:3306)/watch?charset=utf8mb4&parseTime=True&loc=Local"
+  maxIdleConns: 10
+  maxOpenConns: 100
+  maxLifetime: 3600

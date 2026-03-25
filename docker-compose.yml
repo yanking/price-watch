@@ -1,0 +1,139 @@
+services:
+  # ==================== 数据存储 ====================
+
+  mysql:
+    image: mysql:${MYSQL_VERSION:-8.0}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-watch}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/mysql:/var/lib/mysql
+      - ${CONFIG_DIR:-./docker/config}/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price-watch-net
+
+  redis:
+    image: redis:${REDIS_VERSION:-7.4-alpine}
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/redis:/data
+      - ${CONFIG_DIR:-./docker/config}/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price-watch-net
+
+  # ==================== 可观测性 ====================
+
+  jaeger:
+    image: jaegertracing/all-in-one:${JAEGER_VERSION:-1.76.0}
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:16686 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price-watch-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.148.0}
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector/config.yaml"]
+    ports:
+      - "${OTEL_COLLECTOR_GRPC_PORT:-4317}:4317"
+      - "${OTEL_COLLECTOR_HTTP_PORT:-4318}:4318"
+      - "8889:8889"
+    volumes:
+      - ${CONFIG_DIR:-./docker/config}/otel-collector/config.yaml:/etc/otel-collector/config.yaml:ro
+    depends_on:
+      jaeger:
+        condition: service_healthy
+    networks:
+      - price-watch-net
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.10.0}
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/prometheus:/prometheus
+      - ${CONFIG_DIR:-./docker/config}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price-watch-net
+
+  loki:
+    image: grafana/loki:${LOKI_VERSION:-3.6.3}
+    restart: unless-stopped
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/loki:/loki
+      - ${CONFIG_DIR:-./docker/config}/loki/loki-config.yml:/etc/loki/config.yml:ro
+    command: -config.file=/etc/loki/config.yml
+    # Loki 容器是无 shell 的最小化镜像，无法使用健康检查
+    networks:
+      - price-watch-net
+
+  promtail:
+    image: grafana/promtail:${LOKI_VERSION:-3.6.3}
+    restart: unless-stopped
+    volumes:
+      - ${LOGS_DIR:-./docker/logs}:/var/log/app:ro
+      - ${CONFIG_DIR:-./docker/config}/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - price-watch-net
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-12.4.1}
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/grafana:/var/lib/grafana
+      - ${CONFIG_DIR:-./docker/config}/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - price-watch-net
+
+networks:
+  price-watch-net:
+    driver: bridge

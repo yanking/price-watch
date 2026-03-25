@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # OpenTelemetry Collector 指标
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # 应用指标（需要应用暴露 /metrics 端点）
+  - job_name: 'price-watch'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+    metrics_path: /metrics
