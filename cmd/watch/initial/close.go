@@ -2,12 +2,11 @@ package initial
 
 import "github.com/yanking/price-watch/pkg/app"
 
-func Close(server []app.Server) (closes []app.CleanupFunc) {
-	for _, s := range server {
+func Close(servers []app.Server) (closes []app.CleanupFunc) {
+	// Stop servers in reverse order: adapters first, then HTTP
+	for i := len(servers) - 1; i >= 0; i-- {
+		s := servers[i]
 		closes = append(closes, s.Stop)
 	}
-
-	// 其他需要关闭的资源可以在这里添加，例如数据库连接、缓存连接等
-
 	return
 }

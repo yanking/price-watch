@@ -1,16 +1,34 @@
 package initial
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+	"github.com/yanking/price-watch/internal/watch/exchange"
+	"github.com/yanking/price-watch/internal/watch/handler"
+	"github.com/yanking/price-watch/internal/watch/server"
 	"github.com/yanking/price-watch/internal/watch/svc"
 	"github.com/yanking/price-watch/pkg/app"
 )
 
-// CreateServices 创建应用所需的所有服务器
-// 参数 ctx 为服务上下文，包含配置、日志器等依赖
-// 返回 servers 列表，可包含 HTTP 服务器、GRPC 服务器等
 func CreateServices(ctx *svc.ServiceContext) (services []app.Server) {
-	// TODO: 创建服务器，例如：
-	// services = append(services, NewHTTPServer(ctx.Config.HTTP, ctx.Logger))
-	// services = append(services, NewGRPCServer(ctx.Config.GRPC, ctx.Logger))
+	httpSrv := server.NewGinServer(ctx.Config.HTTP.Addr, func(e *gin.Engine) {
+		handler.RegisterRoutes(e, ctx.Redis.Client(), ctx.Influx, ctx.SubMgr, ctx.Adapters)
+	})
+	services = append(services, httpSrv)
+
+	for _, adapter := range ctx.Adapters {
+		services = append(services, &adapterServer{adapter: adapter})
+	}
+
 	return
 }
+
+type adapterServer struct {
+	adapter exchange.ExchangeAdapter
+}
+
+func (s *adapterServer) Start() error   { return s.adapter.Start(context.Background()) }
+func (s *adapterServer) Stop() error    { return s.adapter.Stop() }
+func (s *adapterServer) String() string { return fmt.Sprintf("exchange-%s", s.adapter.Name()) }

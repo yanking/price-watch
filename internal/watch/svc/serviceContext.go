@@ -6,6 +6,8 @@ import (
 	"log/slog"
 
 	"github.com/yanking/price-watch/internal/watch/config"
+	"github.com/yanking/price-watch/internal/watch/exchange"
+	"github.com/yanking/price-watch/internal/watch/subscription"
 	"github.com/yanking/price-watch/pkg/database/influxdb"
 	"github.com/yanking/price-watch/pkg/database/redisx"
 	"github.com/yanking/price-watch/pkg/eventbus"
@@ -18,6 +20,10 @@ type ServiceContext struct {
 	Redis  *redisx.Client
 	Influx *influxdb.Client
 	Bus    eventbus.Bus
+
+	// Set by initial.App()
+	SubMgr   *subscription.Manager
+	Adapters []exchange.ExchangeAdapter
 }
 
 func NewServiceContext(c config.Config) (*ServiceContext, error) {
