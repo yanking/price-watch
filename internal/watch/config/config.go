@@ -1,14 +1,18 @@
 package config
 
 import (
-	"github.com/yanking/price-watch/pkg/database/mysqlx"
+	"github.com/yanking/price-watch/internal/watch/exchange"
+	"github.com/yanking/price-watch/pkg/database/influxdb"
 	"github.com/yanking/price-watch/pkg/database/redisx"
+	"github.com/yanking/price-watch/pkg/eventbus"
 	"github.com/yanking/price-watch/pkg/log"
 )
 
-// Config 应用配置
 type Config struct {
-	Log   log.Config    `mapstructure:"log"`
-	MySQL mysqlx.Config `mapstructure:"mysql"`
-	Redis redisx.Config `mapstructure:"redis"`
+	Log       log.Config                         `mapstructure:"log"`
+	Redis     redisx.Config                      `mapstructure:"redis"`
+	InfluxDB  influxdb.Config                    `mapstructure:"influxdb"`
+	EventBus  eventbus.Config                    `mapstructure:"eventbus"`
+	HTTP      exchange.HTTPConfig                `mapstructure:"http"`
+	Exchanges map[string]exchange.ExchangeConfig `mapstructure:"exchanges"`
 }

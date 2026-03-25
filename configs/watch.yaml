@@ -3,14 +3,76 @@ log:
   level: 'info'
   format: 'json'
   output: 'stdout'
-  enableTrace: true
   addSource: false
+  enableTrace: true
   timeFormat: '2006-01-02 15:04:05'
 
-# MySQL 配置
-mysql:
-  # 注意：这是开发环境示例配置，生产环境请使用环境变量管理密码
-  dsn: "root:root@tcp(127.0.0.1:3306)/watch?charset=utf8mb4&parseTime=True&loc=Local"
-  maxIdleConns: 10
-  maxOpenConns: 100
-  maxLifetime: 3600
+# Redis 配置
+redis:
+  addrs:
+    - '127.0.0.1:6379'
+  password: ''
+  db: 0
+
+# InfluxDB 配置
+influxdb:
+  url: 'http://127.0.0.1:8086'
+  token: ''
+  org: 'price-watch'
+  buckets:
+    tick: 'prices-tick'
+    kline: 'prices-kline'
+  batchSize: 500
+  flushInterval: '5s'
+
+# EventBus 配置
+eventbus:
+  driver: 'memory'
+  memory:
+    bufferSize: 1024
+  nats:
+    url: 'nats://127.0.0.1:4222'
+    streams:
+      - name: 'PRICE_TICK'
+        subjects:
+          - 'price.tick.>'
+        maxAge: '1h'
+      - name: 'PRICE_KLINE'
+        subjects:
+          - 'price.kline.>'
+        maxAge: '24h'
+
+# HTTP 服务配置
+http:
+  addr: ':8080'
+
+# 交易所配置
+exchanges:
+  binance:
+    enabled: true
+    wsUrl: 'wss://stream.binance.com:9443/ws'
+    restUrl: 'https://api.binance.com'
+    reconnectBase: '1s'
+    reconnectMax: '60s'
+    pingInterval: '30s'
+  okx:
+    enabled: true
+    wsUrl: 'wss://ws.okx.com:8443/ws/v5/public'
+    restUrl: 'https://www.okx.com'
+    reconnectBase: '1s'
+    reconnectMax: '60s'
+    pingInterval: '25s'
+  bybit:
+    enabled: true
+    wsUrl: 'wss://stream.bybit.com/v5/public/spot'
+    restUrl: 'https://api.bybit.com'
+    reconnectBase: '1s'
+    reconnectMax: '60s'
+    pingInterval: '20s'
+  gateio:
+    enabled: true
+    wsUrl: 'wss://api.gateio.ws/ws/v4/'
+    restUrl: 'https://api.gateio.ws'
+    reconnectBase: '1s'
+    reconnectMax: '60s'
+    pingInterval: '15s'
