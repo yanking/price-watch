@@ -38,6 +38,44 @@ services:
     networks:
       - price-watch-net
 
+  influxdb:
+    image: influxdb:${INFLUXDB_VERSION:-2.7-alpine}
+    restart: unless-stopped
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/influxdb:/var/lib/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-adminadmin}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-price-watch}
+      DOCKER_INFLUXDB_INIT_BUCKET: prices-tick
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price-watch-net
+
+  nats:
+    image: nats:${NATS_VERSION:-2.10-alpine}
+    restart: unless-stopped
+    command: ["--jetstream", "--store_dir", "/data"]
+    ports:
+      - "${NATS_PORT:-4222}:4222"
+      - "${NATS_MONITOR_PORT:-8222}:8222"
+    volumes:
+      - ${DATA_DIR:-./docker/data}/nats:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8222/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - price-watch-net
+
   # ==================== 可观测性 ====================
 
   jaeger:
