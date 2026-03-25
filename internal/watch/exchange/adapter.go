@@ -247,15 +247,11 @@ func (b *BaseAdapter) pingLoop() {
 
 // NewAdapter creates the appropriate exchange adapter by name.
 // Returns nil for unknown exchange names.
-// Concrete adapters are implemented in Tasks 8-11.
 func NewAdapter(name string, bus eventbus.Bus, logger *slog.Logger, cfg ExchangeConfig) ExchangeAdapter {
-	// Will be populated as exchange adapters are implemented:
-	// case "binance": return NewBinanceAdapter(bus, logger, cfg)
-	// case "okx": return NewOKXAdapter(bus, logger, cfg)
-	// case "bybit": return NewBybitAdapter(bus, logger, cfg)
-	// case "gateio": return NewGateAdapter(bus, logger, cfg)
-	_ = bus
-	_ = logger
-	_ = cfg
-	return nil
+	switch name {
+	case "binance":
+		return NewBinanceAdapter(bus, logger, cfg)
+	default:
+		return nil
+	}
 }
