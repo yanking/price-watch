@@ -253,6 +253,8 @@ func NewAdapter(name string, bus eventbus.Bus, logger *slog.Logger, cfg Exchange
 		return NewBinanceAdapter(bus, logger, cfg)
 	case "okx":
 		return NewOKXAdapter(bus, logger, cfg)
+	case "bybit":
+		return NewBybitAdapter(bus, logger, cfg)
 	default:
 		return nil
 	}
