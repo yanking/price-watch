@@ -255,6 +255,8 @@ func NewAdapter(name string, bus eventbus.Bus, logger *slog.Logger, cfg Exchange
 		return NewOKXAdapter(bus, logger, cfg)
 	case "bybit":
 		return NewBybitAdapter(bus, logger, cfg)
+	case "gateio":
+		return NewGateAdapter(bus, logger, cfg)
 	default:
 		return nil
 	}
