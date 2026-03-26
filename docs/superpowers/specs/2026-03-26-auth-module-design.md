@@ -606,14 +606,281 @@ email:
 
 ---
 
-## 九、项目目录结构
+## 九、存储层设计
+
+### 9.1 设计原则
+
+采用 **DO/PO 分离** 模式，实现领域模型与持久化模型解耦，支持多种数据库切换。
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Domain Layer                              │
+│                                                                  │
+│    User (DO - Domain Object)    纯业务逻辑，无持久化依赖          │
+│    ThirdPartyBind (DO)                                          │
+│                                                                  │
+│    UserRepository (Interface)    仓储接口，只依赖 DO             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Infrastructure Layer                          │
+│                                                                  │
+│    ┌──────────────────────────────────────────────────────┐     │
+│    │                  Data Access Layer                    │     │
+│    │                                                       │     │
+│    │  UserDAO (Interface)          数据访问接口             │     │
+│    │                                                       │     │
+│    │  ┌─────────────────┐  ┌─────────────────┐            │     │
+│    │  │   MySQL Impl    │  │  MongoDB Impl   │            │     │
+│    │  │                 │  │                 │            │     │
+│    │  │  UserPO (GORM)  │  │  UserPO (Mongo) │            │     │
+│    │  │  Converter      │  │  Converter      │            │     │
+│    │  └─────────────────┘  └─────────────────┘            │     │
+│    └──────────────────────────────────────────────────────┘     │
+│                                                                  │
+│    UserRepositoryImpl    仓储实现，调用 DAO，做 DO/PO 转换       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 9.2 DAO 接口
+
+```go
+// infrastructure/persistence/dao/user_dao.go
+package dao
+
+// UserDAO 数据访问接口 - 与具体数据库无关
+type UserDAO interface {
+    Insert(ctx context.Context, user *entity.User) error
+    Update(ctx context.Context, user *entity.User) error
+    FindById(ctx context.Context, id int64) (*entity.User, error)
+    FindByUsername(ctx context.Context, username string) (*entity.User, error)
+    FindByEmail(ctx context.Context, email string) (*entity.User, error)
+    FindByPhone(ctx context.Context, areaCode, phone string) (*entity.User, error)
+    ExistsByUsername(ctx context.Context, username string) (bool, error)
+    ExistsByEmail(ctx context.Context, email string) (bool, error)
+    ExistsByPhone(ctx context.Context, areaCode, phone string) (bool, error)
+}
+```
+
+### 9.3 MySQL 实现
+
+```go
+// infrastructure/persistence/mysql/user_po.go
+package mysql
+
+// UserPO MySQL 持久化对象
+type UserPO struct {
+    Id            int64     `gorm:"column:id;primaryKey"`
+    Username      string    `gorm:"column:username;type:varchar(50);uniqueIndex"`
+    PasswordHash  *string   `gorm:"column:password_hash;type:varchar(255)"`
+    Email         *string   `gorm:"column:email;type:varchar(100);uniqueIndex"`
+    EmailVerified bool      `gorm:"column:email_verified"`
+    AreaCode      *string   `gorm:"column:area_code;type:varchar(10)"`
+    Phone         *string   `gorm:"column:phone;type:varchar(20)"`
+    PhoneVerified bool      `gorm:"column:phone_verified"`
+    Avatar        *string   `gorm:"column:avatar;type:varchar(500)"`
+    Nickname      *string   `gorm:"column:nickname;type:varchar(50)"`
+    Status        int8      `gorm:"column:status"`
+    CreatedAt     time.Time `gorm:"column:created_at"`
+    UpdatedAt     time.Time `gorm:"column:updated_at"`
+}
+
+func (UserPO) TableName() string {
+    return "users"
+}
+
+// infrastructure/persistence/mysql/user_dao_impl.go
+type UserDAOImpl struct {
+    db *gorm.DB
+}
+
+func NewUserDAO(db *gorm.DB) dao.UserDAO {
+    return &UserDAOImpl{db: db}
+}
+
+func (d *UserDAOImpl) Insert(ctx context.Context, user *entity.User) error {
+    po := converter.UserToPO(user)
+    if err := d.db.WithContext(ctx).Create(po).Error; err != nil {
+        return err
+    }
+    user.SetId(po.Id)
+    return nil
+}
+// ... 其他方法
+```
+
+### 9.4 MongoDB 实现（示例）
+
+```go
+// infrastructure/persistence/mongodb/user_po.go
+package mongodb
+
+// UserPO MongoDB 持久化对象
+type UserPO struct {
+    ID            primitive.ObjectID `bson:"_id,omitempty"`
+    UserId        int64              `bson:"user_id"`
+    Username      string             `bson:"username"`
+    PasswordHash  *string            `bson:"password_hash,omitempty"`
+    Email         *string            `bson:"email,omitempty"`
+    EmailVerified bool               `bson:"email_verified"`
+    AreaCode      *string            `bson:"area_code,omitempty"`
+    Phone         *string            `bson:"phone,omitempty"`
+    PhoneVerified bool               `bson:"phone_verified"`
+    Avatar        *string            `bson:"avatar,omitempty"`
+    Nickname      *string            `bson:"nickname,omitempty"`
+    Status        int8               `bson:"status"`
+    CreatedAt     time.Time          `bson:"created_at"`
+    UpdatedAt     time.Time          `bson:"updated_at"`
+}
+```
+
+### 9.5 转换器
+
+```go
+// infrastructure/persistence/converter/user_converter.go
+package converter
+
+// UserToPO 领域对象 -> MySQL PO
+func UserToPO(user *entity.User) *mysql.UserPO {
+    po := &mysql.UserPO{
+        Id:            user.Id(),
+        Username:      user.Username(),
+        EmailVerified: user.EmailVerified(),
+        PhoneVerified: user.PhoneVerified(),
+        Status:        int8(user.Status()),
+        CreatedAt:     user.CreatedAt(),
+        UpdatedAt:     user.UpdatedAt(),
+    }
+
+    if user.Password() != nil {
+        hash := user.Password().Hash()
+        po.PasswordHash = &hash
+    }
+    if user.Email() != nil {
+        email := user.Email().Value()
+        po.Email = &email
+    }
+    // ... 其他字段
+
+    return po
+}
+
+// POToUser MySQL PO -> 领域对象
+func POToUser(po *mysql.UserPO) *entity.User {
+    user := entity.NewUserFromData(
+        po.Id,
+        po.Username,
+        po.EmailVerified,
+        po.PhoneVerified,
+        po.Status,
+        po.CreatedAt,
+        po.UpdatedAt,
+    )
+
+    if po.PasswordHash != nil {
+        user.SetPassword(valueobject.NewPasswordFromHash(*po.PasswordHash))
+    }
+    // ... 其他字段
+
+    return user
+}
+```
+
+### 9.6 仓储实现
+
+```go
+// infrastructure/persistence/repository/user_repository_impl.go
+package repository
+
+// UserRepositoryImpl 仓储实现，只依赖 DAO 接口
+type UserRepositoryImpl struct {
+    dao dao.UserDAO
+}
+
+// NewUserRepository 创建仓储，注入具体 DAO 实现
+func NewUserRepository(dao dao.UserDAO) repository.UserRepository {
+    return &UserRepositoryImpl{dao: dao}
+}
+
+func (r *UserRepositoryImpl) Save(ctx context.Context, user *entity.User) error {
+    return r.dao.Insert(ctx, user)
+}
+
+func (r *UserRepositoryImpl) FindById(ctx context.Context, id int64) (*entity.User, error) {
+    return r.dao.FindById(ctx, id)
+}
+// ... 其他方法委托给 DAO
+```
+
+### 9.7 数据库切换
+
+```go
+// cmd/auth/init.go
+
+// InitUserRepository 初始化用户仓储
+func InitUserRepository(cfg *config.DatabaseConfig, db interface{}) repository.UserRepository {
+    var userDAO dao.UserDAO
+
+    switch cfg.Type {
+    case "mysql":
+        mysqlDB := db.(*gorm.DB)
+        userDAO = mysql.NewUserDAO(mysqlDB)
+
+    case "mongodb":
+        mongoDB := db.(*mongo.Database)
+        userDAO = mongodb.NewUserDAO(mongoDB)
+
+    case "postgresql":
+        pgDB := db.(*gorm.DB)
+        userDAO = postgresql.NewUserDAO(pgDB)
+
+    default:
+        panic("unsupported database type")
+    }
+
+    return repository.NewUserRepository(userDAO)
+}
+```
+
+### 9.8 配置
+
+```yaml
+# configs/auth.yaml
+database:
+  type: mysql  # mysql / mongodb / postgresql
+
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "price_watch"
+    username: "root"
+    password: ""
+
+  mongodb:
+    uri: "mongodb://localhost:27017"
+    database: "price_watch"
+```
+
+### 9.9 优势
+
+| 方面 | 说明 |
+|------|------|
+| 领域层独立 | DO 无任何持久化依赖，纯业务逻辑 |
+| 数据库可替换 | 新增 DAO 实现即可切换数据库 |
+| 易于测试 | 可用 Mock DAO 进行单元测试 |
+| 扩展性强 | 支持多数据库、读写分离等 |
+
+---
+
+## 十、项目目录结构
 
 ```
 internal/
 └── auth/
     ├── domain/
     │   ├── entity/
-    │   │   ├── user.go
+    │   │   ├── user.go              # DO: 纯领域对象
     │   │   └── third_party_bind.go
     │   ├── valueobject/
     │   │   ├── email.go
@@ -621,7 +888,7 @@ internal/
     │   │   ├── phone.go
     │   │   └── oauth_provider.go
     │   ├── repository/
-    │   │   ├── user_repository.go
+    │   │   ├── user_repository.go   # 仓储接口
     │   │   └── third_party_bind_repository.go
     │   └── service/
     │       ├── token_service.go
@@ -637,9 +904,23 @@ internal/
     │       └── user_dto.go
     ├── infrastructure/
     │   ├── persistence/
-    │   │   ├── user_repository_impl.go
-    │   │   ├── third_party_bind_repository_impl.go
-    │   │   └── models.go
+    │   │   ├── dao/                 # 数据访问接口
+    │   │   │   ├── user_dao.go
+    │   │   │   └── third_party_bind_dao.go
+    │   │   ├── mysql/               # MySQL 实现
+    │   │   │   ├── user_po.go
+    │   │   │   ├── user_dao_impl.go
+    │   │   │   ├── third_party_bind_po.go
+    │   │   │   └── third_party_bind_dao_impl.go
+    │   │   ├── mongodb/             # MongoDB 实现（未来扩展）
+    │   │   │   ├── user_po.go
+    │   │   │   └── user_dao_impl.go
+    │   │   ├── converter/           # DO/PO 转换器
+    │   │   │   ├── user_converter.go
+    │   │   │   └── third_party_bind_converter.go
+    │   │   └── repository/          # 仓储实现
+    │   │       ├── user_repository_impl.go
+    │   │       └── third_party_bind_repository_impl.go
     │   ├── oauth/
     │   │   ├── github_oauth.go
     │   │   └── wechat_oauth.go
@@ -676,7 +957,7 @@ configs/
 
 ---
 
-## 十、配置设计
+## 十一、配置设计
 
 ```yaml
 # configs/auth.yaml
@@ -739,7 +1020,7 @@ auth:
 
 ---
 
-## 十一、技术选型
+## 十二、技术选型
 
 | 组件 | 技术选型 | 说明 |
 |------|----------|------|
@@ -754,7 +1035,7 @@ auth:
 
 ---
 
-## 十二、安全考虑
+## 十三、安全考虑
 
 1. **密码安全**：使用 bcrypt 加密，不存储明文
 2. **Token 安全**：JWT 签名验证，版本号控制失效
@@ -765,7 +1046,7 @@ auth:
 
 ---
 
-## 十三、扩展性
+## 十四、扩展性
 
 1. **新增 OAuth 提供商**：实现 `OAuthStrategy` 接口
 2. **新增通知渠道**：实现 `Provider` 接口
