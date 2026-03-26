@@ -1,6 +1,7 @@
 package valueobject
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -23,8 +24,10 @@ func TestNewEmail(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewEmail() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !tt.wantErr && email != nil && email.Value() != tt.input {
-				t.Errorf("Email.Value() = %v, want %v", email.Value(), tt.input)
+			// 对于带空格的输入，应该验证trim后的值
+			expectedValue := strings.TrimSpace(tt.input)
+			if !tt.wantErr && email != nil && email.Value() != expectedValue {
+				t.Errorf("Email.Value() = %v, want %v", email.Value(), expectedValue)
 			}
 		})
 	}

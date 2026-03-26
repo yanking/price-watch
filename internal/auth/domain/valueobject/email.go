@@ -2,6 +2,7 @@ package valueobject
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -25,7 +26,10 @@ func NewEmail(value string) (*Email, error) {
 
 	// 验证邮箱格式
 	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
-	matched, _ := regexp.MatchString(pattern, value)
+	matched, err := regexp.MatchString(pattern, value)
+	if err != nil {
+		return nil, fmt.Errorf("邮箱验证失败: %w", err)
+	}
 	if !matched {
 		return nil, errors.New("邮箱格式不正确")
 	}
