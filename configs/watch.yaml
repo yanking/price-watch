@@ -14,3 +14,11 @@ mysql:
   maxIdleConns: 10
   maxOpenConns: 100
   maxLifetime: 3600
+
+# Redis 配置
+redis:
+  host: "127.0.0.1"
+  port: 6379
+  password: ""
+  db: 0
+  poolSize: 10

@@ -7,6 +7,7 @@ import (
 
 	"github.com/yanking/price-watch/cmd/watch/initial"
 	"github.com/yanking/price-watch/internal/watch/config"
+	authconfig "github.com/yanking/price-watch/internal/auth/config"
 	"github.com/yanking/price-watch/internal/watch/svc"
 	"github.com/yanking/price-watch/pkg/app"
 	"github.com/yanking/price-watch/pkg/conf"
@@ -31,6 +32,7 @@ func main() {
 	}
 
 	configFile := flag.String("c", "./configs/watch.yaml", "path to config file.")
+	authConfigFile := flag.String("auth", "./configs/auth.yaml", "path to auth config file.")
 	showVersion := flag.Bool("v", false, "show version information.")
 	flag.Parse()
 
@@ -42,14 +44,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	// 加载配置
+	// 加载主配置
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
+
+	// 加载 auth 配置
+	var ac authconfig.Config
+	conf.MustLoad(*authConfigFile, &ac)
+
+	// 创建服务上下文
 	ctx, err := svc.NewServiceContext(c)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "create service context: %v\n", err)
 		os.Exit(1)
 	}
+
+	// 设置 auth 配置
+	ctx.AuthConfig = ac
 	// 添加 defer 关闭
 	defer func() {
 		if cErr := ctx.Close(); cErr != nil {

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/yanking/price-watch/internal/watch/config"
+	watchconfig "github.com/yanking/price-watch/internal/watch/config"
+	authconfig "github.com/yanking/price-watch/internal/auth/config"
 	"github.com/yanking/price-watch/pkg/database/mysqlx"
 	"github.com/yanking/price-watch/pkg/database/redisx"
 	"github.com/yanking/price-watch/pkg/log"
@@ -13,14 +14,15 @@ import (
 
 // ServiceContext 服务上下文
 type ServiceContext struct {
-	Config config.Config
-	Logger *slog.Logger
-	MySQL  *mysqlx.Client
-	Redis  *redisx.Client
+	Config     watchconfig.Config
+	AuthConfig authconfig.Config
+	Logger     *slog.Logger
+	MySQL      *mysqlx.Client
+	Redis      *redisx.Client
 }
 
 // NewServiceContext 创建服务上下文
-func NewServiceContext(c config.Config) (*ServiceContext, error) {
+func NewServiceContext(c watchconfig.Config) (*ServiceContext, error) {
 	// 验证配置
 	if err := c.Log.Validate(); err != nil {
 		return nil, fmt.Errorf("validate log config: %w", err)
