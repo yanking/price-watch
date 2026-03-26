@@ -36,3 +36,17 @@ func TestEmailMask(t *testing.T) {
 		t.Errorf("Email.Mask() = %v, want t***@example.com", email.Mask())
 	}
 }
+
+func TestNewEmail_TrimsSpaces(t *testing.T) {
+	email, _ := NewEmail("  test@example.com  ")
+	if email.Value() != "test@example.com" {
+		t.Errorf("Email.Value() = %v, want test@example.com (trimmed)", email.Value())
+	}
+}
+
+func TestNewEmail_OnlySpaces(t *testing.T) {
+	email, err := NewEmail("   ")
+	if err != nil || email != nil {
+		t.Errorf("Only spaces should return nil, got err=%v, email=%v", err, email)
+	}
+}

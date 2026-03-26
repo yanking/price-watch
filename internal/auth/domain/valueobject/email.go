@@ -15,7 +15,13 @@ func NewEmail(value string) (*Email, error) {
 		return nil, nil
 	}
 
+	// 去除前后空格
 	value = strings.TrimSpace(value)
+
+	// 再次检查是否为空字符串（处理纯空格输入）
+	if value == "" {
+		return nil, nil
+	}
 
 	// 验证邮箱格式
 	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
