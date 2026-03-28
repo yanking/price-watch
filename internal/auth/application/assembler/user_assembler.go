@@ -22,6 +22,8 @@ func (a *UserAssembler) ToResponse(user *entity.User) *dto.UserResponse {
 	response := &dto.UserResponse{
 		ID:            user.ID(),
 		Username:      user.Username(),
+		Nickname:      user.Nickname(),
+		Avatar:        user.Avatar(),
 		EmailVerified: user.EmailVerified(),
 		PhoneVerified: user.PhoneVerified(),
 		Status:        string(user.Status()),

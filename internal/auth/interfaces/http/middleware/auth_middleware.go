@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/yanking/price-watch/internal/auth/domain/service"
-	"github.com/yanking/price-watch/internal/auth/interfaces/http/response"
+	"github.com/yanking/price-watch/pkg/response"
 )
 
 const (

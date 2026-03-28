@@ -114,7 +114,7 @@ func TestUserResetPassword(t *testing.T) {
 func TestUserUpdateProfile(t *testing.T) {
 	user, _ := entity.NewUser("testuser", nil, nil)
 
-	err := user.UpdateProfile("newusername")
+	err := user.UpdateProfile("newusername", "")
 	if err != nil {
 		t.Fatalf("UpdateProfile() error = %v", err)
 	}
@@ -127,7 +127,7 @@ func TestUserUpdateProfile(t *testing.T) {
 func TestUserUpdateProfile_EmptyUsername(t *testing.T) {
 	user, _ := entity.NewUser("testuser", nil, nil)
 
-	err := user.UpdateProfile("")
+	err := user.UpdateProfile("", "")
 	if err == nil {
 		t.Error("UpdateProfile() should return error for empty username")
 	}
@@ -195,12 +195,14 @@ func TestNewUserFromData(t *testing.T) {
 	user, err := entity.NewUserFromData(
 		123, "testuser", "hash123", "test@example.com",
 		"86", "13800138000", true, true,
+		"https://example.com/avatar.png", "测试昵称",
 		"active", "github", "oauth123", now, now,
 	)
 
 	if err != nil {
 		t.Fatalf("NewUserFromData() error = %v", err)
 	}
+
 	if user.ID() != 123 {
 		t.Errorf("ID() = %v, want 123", user.ID())
 	}
@@ -241,6 +243,7 @@ func TestNewUserFromData_InvalidEmail(t *testing.T) {
 	_, err := entity.NewUserFromData(
 		123, "testuser", "hash123", "invalid-email",
 		"86", "13800138000", true, true,
+		"https://example.com/avatar.png", "测试昵称",
 		"active", "", "", now, now,
 	)
 

@@ -51,8 +51,8 @@ func (s *UserService) UpdateProfile(ctx context.Context, userId int64, req *dto.
 		return nil, errors.New("用户不存在")
 	}
 
-	// 更新用户名
-	if err := user.UpdateProfile(req.Username); err != nil {
+	// 更新用户名和昵称
+	if err := user.UpdateProfile(req.Username, req.Nickname); err != nil {
 		return nil, fmt.Errorf("更新用户资料失败: %w", err)
 	}
 

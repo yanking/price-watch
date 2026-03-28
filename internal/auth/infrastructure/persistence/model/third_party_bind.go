@@ -1,11 +1,11 @@
-package mysql
+package model
 
 import "time"
 
-// ThirdPartyBindPO 第三方登录绑定持久化对象
-type ThirdPartyBindPO struct {
+// ThirdPartyBind 第三方登录绑定 GORM 模型
+type ThirdPartyBind struct {
 	Id           int64     `gorm:"column:id;primaryKey;autoIncrement"`
-	UserId       int64     `gorm:"column:user_id;not null;index"`
+	UserId       uint64    `gorm:"column:user_id;not null;index"`
 	Provider     int8      `gorm:"column:provider;type:tinyint;not null"`
 	ProviderId   string    `gorm:"column:provider_id;type:varchar(100);not null"`
 	ProviderName *string   `gorm:"column:provider_name;type:varchar(100)"`
@@ -13,6 +13,6 @@ type ThirdPartyBindPO struct {
 }
 
 // TableName 指定表名
-func (ThirdPartyBindPO) TableName() string {
+func (ThirdPartyBind) TableName() string {
 	return "third_party_binds"
 }

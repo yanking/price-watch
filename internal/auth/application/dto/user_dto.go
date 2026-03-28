@@ -6,6 +6,8 @@ import "time"
 type UserResponse struct {
 	ID            uint64    `json:"id"`
 	Username      string    `json:"username"`
+	Nickname      string    `json:"nickname,omitempty"`
+	Avatar        string    `json:"avatar,omitempty"`
 	Email         string    `json:"email,omitempty"`
 	AreaCode      string    `json:"area_code,omitempty"`
 	Phone         string    `json:"phone,omitempty"`
@@ -21,6 +23,7 @@ type UserResponse struct {
 // UpdateProfileRequest 更新资料请求
 type UpdateProfileRequest struct {
 	Username string `json:"username" binding:"required"`
+	Nickname string `json:"nickname" binding:"omitempty"`
 	Email    string `json:"email" binding:"omitempty,email"`
 }
 

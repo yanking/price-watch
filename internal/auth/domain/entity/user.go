@@ -38,6 +38,8 @@ type User struct {
 	phone         string
 	emailVerified bool
 	phoneVerified bool
+	avatar        string
+	nickname      string
 	status        UserStatus
 	oauthProvider string
 	oauthID       string
@@ -79,6 +81,8 @@ func NewUserFromData(
 	phone string,
 	emailVerified bool,
 	phoneVerified bool,
+	avatar string,
+	nickname string,
 	status string,
 	oauthProvider string,
 	oauthID string,
@@ -105,6 +109,8 @@ func NewUserFromData(
 		phone:         phone,
 		emailVerified: emailVerified,
 		phoneVerified: phoneVerified,
+		avatar:        avatar,
+		nickname:      nickname,
 		status:        UserStatus(status),
 		oauthProvider: oauthProvider,
 		oauthID:       oauthID,
@@ -159,6 +165,14 @@ func (u *User) OAuthID() string {
 	return u.oauthID
 }
 
+func (u *User) Avatar() string {
+	return u.avatar
+}
+
+func (u *User) Nickname() string {
+	return u.nickname
+}
+
 func (u *User) CreatedAt() time.Time {
 	return u.createdAt
 }
@@ -201,6 +215,16 @@ func (u *User) SetOAuthProvider(provider string, oauthID string) {
 
 func (u *User) SetStatus(status UserStatus) {
 	u.status = status
+	u.updatedAt = time.Now()
+}
+
+func (u *User) SetAvatar(avatar string) {
+	u.avatar = avatar
+	u.updatedAt = time.Now()
+}
+
+func (u *User) SetNickname(nickname string) {
+	u.nickname = nickname
 	u.updatedAt = time.Now()
 }
 
@@ -248,12 +272,15 @@ func (u *User) ResetPassword(newPassword *Password) {
 }
 
 // UpdateProfile 更新用户资料
-func (u *User) UpdateProfile(username string) error {
+func (u *User) UpdateProfile(username string, nickname string) error {
 	if strings.TrimSpace(username) == "" {
 		return errors.New("用户名不能为空")
 	}
 
 	u.username = username
+	if nickname != "" {
+		u.nickname = nickname
+	}
 	u.updatedAt = time.Now()
 	return nil
 }

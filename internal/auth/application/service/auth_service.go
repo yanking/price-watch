@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yanking/price-watch/internal/auth/application/assembler"
 	"github.com/yanking/price-watch/internal/auth/application/dto"
 	"github.com/yanking/price-watch/internal/auth/domain/entity"
+	domainerrors "github.com/yanking/price-watch/internal/auth/domain/errors"
 	"github.com/yanking/price-watch/internal/auth/domain/repository"
 	"github.com/yanking/price-watch/internal/auth/domain/service"
 	domainvo "github.com/yanking/price-watch/internal/auth/domain/valueobject"
@@ -52,7 +52,7 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, fmt.Errorf("检查用户名失败: %w", err)
 	}
 	if exists {
-		return nil, errors.New("用户名已存在")
+		return nil, domainerrors.ErrUsernameExists
 	}
 
 	// 检查邮箱是否已存在
@@ -61,7 +61,7 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, fmt.Errorf("检查邮箱失败: %w", err)
 	}
 	if exists {
-		return nil, errors.New("邮箱已被注册")
+		return nil, domainerrors.ErrEmailExists
 	}
 
 	// 创建值对象
@@ -112,23 +112,23 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 			// 尝试按手机号查找（假设没有区号，使用默认区号）
 			user, err = s.userRepo.FindByPhone(ctx, "86", req.Account)
 			if err != nil || user == nil {
-				return nil, errors.New("账号或密码错误")
+				return nil, domainerrors.ErrAccountPassword
 			}
 		}
 	}
 
 	// 验证密码
 	if user.Password() == nil {
-		return nil, errors.New("账号或密码错误")
+		return nil, domainerrors.ErrAccountPassword
 	}
 
 	if !user.Password().Verify(req.Password) {
-		return nil, errors.New("账号或密码错误")
+		return nil, domainerrors.ErrAccountPassword
 	}
 
 	// 检查用户状态
 	if !user.IsActive() {
-		return nil, errors.New("用户已被停用")
+		return nil, domainerrors.ErrUserSuspended
 	}
 
 	// 生成 token
@@ -178,7 +178,7 @@ func (s *AuthService) OAuthLogin(ctx context.Context, req *dto.OAuthLoginRequest
 			return nil, fmt.Errorf("查询用户失败: %w", err)
 		}
 		if user == nil {
-			return nil, errors.New("用户不存在")
+			return nil, domainerrors.ErrUserNotFound
 		}
 	} else {
 		// 没有绑定，需要创建新用户或绑定已有用户
@@ -232,7 +232,7 @@ func (s *AuthService) OAuthLogin(ctx context.Context, req *dto.OAuthLoginRequest
 
 	// 检查用户状态
 	if !user.IsActive() {
-		return nil, errors.New("用户已被停用")
+		return nil, domainerrors.ErrUserSuspended
 	}
 
 	// 生成 token

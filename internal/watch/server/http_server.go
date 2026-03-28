@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"github.com/yanking/price-watch/internal/auth"
 	authconfig "github.com/yanking/price-watch/internal/auth/config"
 	"github.com/yanking/price-watch/pkg/app"
+	"gorm.io/gorm"
 )
 
 // HTTPServer HTTP 服务器
@@ -31,7 +34,8 @@ type Config struct {
 func NewHTTPServer(
 	cfg Config,
 	authCfg authconfig.Config,
-	mysqlClient interface{},
+	db *gorm.DB,
+	redisClient redis.Cmdable,
 	logger *slog.Logger,
 ) (*HTTPServer, error) {
 	// 设置 Gin 模式
@@ -49,11 +53,8 @@ func NewHTTPServer(
 		})
 	})
 
-	// TODO: 初始化 auth 模块
-	// 这里需要在数据库表创建后集成 auth 路由
-	// if err := initAuthModule(engine, authCfg, mysqlClient, logger); err != nil {
-	// 	return nil, fmt.Errorf("init auth module: %w", err)
-	// }
+	// 初始化 auth 模块
+	auth.InitModule(engine, db, redisClient, authCfg, logger)
 
 	// 创建 HTTP 服务器
 	server := &http.Server{

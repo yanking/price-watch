@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yanking/price-watch/internal/auth/application/dto"
 	"github.com/yanking/price-watch/internal/auth/application/service"
-	"github.com/yanking/price-watch/internal/auth/interfaces/http/response"
+	"github.com/yanking/price-watch/pkg/response"
 )
 
 // AuthHandler 认证处理器

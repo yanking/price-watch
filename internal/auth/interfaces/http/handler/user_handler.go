@@ -5,7 +5,7 @@ import (
 	"github.com/yanking/price-watch/internal/auth/application/dto"
 	"github.com/yanking/price-watch/internal/auth/application/service"
 	"github.com/yanking/price-watch/internal/auth/interfaces/http/middleware"
-	"github.com/yanking/price-watch/internal/auth/interfaces/http/response"
+	"github.com/yanking/price-watch/pkg/response"
 )
 
 // UserHandler 用户处理器

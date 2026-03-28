@@ -21,7 +21,7 @@ func CreateServices(ctx *svc.ServiceContext) (services []app.Server) {
 	}
 
 	// 创建 HTTP 服务器
-	httpServer, err := server.NewHTTPServer(httpCfg, ctx.AuthConfig, ctx.MySQL, ctx.Logger)
+	httpServer, err := server.NewHTTPServer(httpCfg, ctx.AuthConfig, ctx.MySQL.DB(), ctx.Redis.Client(), ctx.Logger)
 	if err != nil {
 		ctx.Logger.Error("create http server", "error", err)
 		return
