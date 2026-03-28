@@ -36,10 +36,14 @@ func (r *UserRepositoryImpl) Save(ctx context.Context, user *entity.User) error 
 	return nil
 }
 
-// Update 更新用户
+// Update 更新用户（使用 Select 确保零值字段也能更新）
 func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) error {
 	m := r.toModel(user)
-	result := r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", m.Id).Updates(m)
+	result := r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", m.Id).
+		Select("username", "password_hash", "email", "email_verified",
+			"area_code", "phone", "phone_verified",
+			"avatar", "nickname", "status", "updated_at").
+		Updates(m)
 	if result.Error != nil {
 		return fmt.Errorf("更新用户失败: %w", result.Error)
 	}
