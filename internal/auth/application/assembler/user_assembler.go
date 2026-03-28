@@ -26,8 +26,7 @@ func (a *UserAssembler) ToResponse(user *entity.User) *dto.UserResponse {
 		Avatar:        user.Avatar(),
 		EmailVerified: user.EmailVerified(),
 		PhoneVerified: user.PhoneVerified(),
-		Status:        string(user.Status()),
-		OAuthProvider: user.OAuthProvider(),
+	Status:        string(user.Status()),
 		CreatedAt:     user.CreatedAt(),
 		UpdatedAt:     user.UpdatedAt(),
 	}

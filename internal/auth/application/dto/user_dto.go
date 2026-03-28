@@ -15,7 +15,6 @@ type UserResponse struct {
 	EmailVerified bool      `json:"email_verified"`
 	PhoneVerified bool      `json:"phone_verified"`
 	Status        string    `json:"status"`
-	OAuthProvider string    `json:"oauth_provider,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

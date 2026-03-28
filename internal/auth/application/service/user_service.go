@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/yanking/price-watch/internal/auth/application/assembler"
 	"github.com/yanking/price-watch/internal/auth/application/dto"
 	"github.com/yanking/price-watch/internal/auth/domain/entity"
+	domainerrors "github.com/yanking/price-watch/internal/auth/domain/errors"
 	"github.com/yanking/price-watch/internal/auth/domain/repository"
 )
 
@@ -35,7 +35,7 @@ func (s *UserService) GetProfile(ctx context.Context, userId int64) (*dto.UserRe
 		return nil, fmt.Errorf("查询用户失败: %w", err)
 	}
 	if user == nil {
-		return nil, errors.New("用户不存在")
+		return nil, domainerrors.ErrUserNotFound
 	}
 
 	return s.userAssembler.ToResponse(user), nil
@@ -48,7 +48,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userId int64, req *dto.
 		return nil, fmt.Errorf("查询用户失败: %w", err)
 	}
 	if user == nil {
-		return nil, errors.New("用户不存在")
+		return nil, domainerrors.ErrUserNotFound
 	}
 
 	// 更新用户名和昵称
@@ -66,7 +66,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userId int64, req *dto.
 		if exists {
 			// 如果邮箱与当前用户邮箱不同，则报错
 			if user.Email() == nil || user.Email().Value() != req.Email {
-				return nil, errors.New("邮箱已被其他用户使用")
+				return nil, domainerrors.ErrEmailExists
 			}
 		}
 
@@ -92,7 +92,7 @@ func (s *UserService) ChangePassword(ctx context.Context, userId int64, req *dto
 		return fmt.Errorf("查询用户失败: %w", err)
 	}
 	if user == nil {
-		return errors.New("用户不存在")
+		return domainerrors.ErrUserNotFound
 	}
 
 	// 创建新密码值对象
